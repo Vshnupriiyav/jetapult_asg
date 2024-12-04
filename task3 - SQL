@@ -1,0 +1,138 @@
+
+Q1: Average ads viewed per user on a daily basis. 
+
+Values to be used:
+user_id : unique user_id.
+date: date at when the user has opened and watched atleast one ad
+
+
+--query start
+select ad_seen_date, avg(total_ads_viewed)as avg_ads_viewed from
+(select
+event_date as ad_seen_date,
+     user_id,
+     count(*) as total_ads_viewed
+     where event = "ad_view_complete" and adHasClicked = 'TRUE'
+     from data1 group by 1,2 )
+group by 1 order by 1;
+-- query end
+
+
+Q2: Top 2 ad providers in terms of daily ad counts.
+
+Values to be used:
+adProvider:
+Event_date:
+User_id: 
+
+
+-- Query Start
+with ads_seen_count_daily as
+(select
+event_date as ad_seen_date,
+     adProvider,
+     count(*) as total_ads_viewed
+     from data1
+     where event = "ad_view_complete" and adHasClicked = 'TRUE'
+     group by 1,2),
+ranking_ad_providers as
+(select
+     ad_seen_date, adProvider, total_ads_viewed,
+     rank() over (partition by ad_seen_date order by total_ads_viewed desc) as Ad_provider_rank
+     from ads_seen_count_daily
+)
+select
+    ad_seen_date, adProvider, total_ads_viewed
+    from ranking_ad_providers
+    where Ad_provider_rank <= 2
+    order by ad_seen_date, Ad_provider_rank ;
+-- Query End
+
+
+
+
+Q3: Median time between first open and first purchase across users.
+
+
+--query start
+
+with initial_data as
+(select
+    user_id,
+    min(event_time) as first_open,
+min(case when event_name = 'iap' and purchase_id is not null then event_time) as first_purchase
+    from data
+),
+
+
+with time_difference as
+(select user_id, timestampdiff(minute,first_open,first_purchase) as time_taken
+from initial_data
+),
+
+
+with ranked_order as
+(select time_taken,
+        ROW_NUMBER() over (order BY time_diff_seconds) AS row_num,
+        count(*) over () AS total_count
+        from time_difference
+),
+
+
+select
+    case when total_count % 2 = 1 then
+            (select time_taken from ranked_order
+             where row_num = (total_count + 1) / 2)
+    else (select avg(time_taken)
+             from ranked_times
+             where row_num in (total_count / 2, total_count / 2 + 1))
+    end as median_time_diff_minutes
+from (select distinct total_count from ranked_order) t;
+
+-- query end
+
+
+
+Q4: Amount of time spent in iap store per user on a daily basis.
+
+-- query start
+select event_date as ad_seen_date, 
+     user_id,
+     sum(time_spent_secs) as time_spent
+     from data1 
+group by 1 order by 1;
+-- query end
+
+
+Q5: Number of transactions and revenue generated from different iap packs.
+
+-- query start
+select
+pack_type,
+count(purchase_id) as num_txns,
+sum(pack_price) as revenue_generated from data1
+group by 1;
+-- query end
+
+
+
+Q6: Average daily payers and revenue in each platform. 
+
+-- query start
+with daily_data as
+(select
+    platform, event_date,
+    count(distinct user_id) as daily_payers,
+    sum(pack_price) as daily_revenue
+    where event_name = 'iap' and purchase_id is not null then event_time
+),
+daily_average as
+(select    
+    platform,
+        avg(daily_payers) as avg_daily_payers,
+        avg(daily_revenue) as avg_daily_revenue
+    from daily_data
+    group by 1
+    )
+select * from daily_average;
+-- quey end
