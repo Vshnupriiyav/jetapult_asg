@@ -124,7 +124,7 @@ with daily_data as
     platform, event_date,
     count(distinct user_id) as daily_payers,
     sum(pack_price) as daily_revenue
-    where event_name = 'iap' and purchase_id is not null then event_time
+    where event_name = 'iap' and purchase_id is not null then from data
 ),
 daily_average as
 (select    
