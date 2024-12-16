@@ -85,7 +85,7 @@ select
              where row_num = (total_count + 1) / 2)
     else (select avg(time_taken)
              from ranked_times
-             where row_num in (total_count / 2, total_count / 2 + 1))
+             where row_num in (total_count / 2, total_count + 1 / 2 ))
     end as median_time_diff_minutes
 from (select distinct total_count from ranked_order) t;
 
